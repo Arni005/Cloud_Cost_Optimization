@@ -1,4 +1,5 @@
 import boto3
+from datetime import datetime, timezone, timedelta
 
 def lambda_handler(event, context):
     ec2 = boto3.client('ec2')
@@ -14,8 +15,14 @@ def lambda_handler(event, context):
         for instance in reservation['Instances']:
             active_instance_ids.add(instance['InstanceId'])
 
+    RETENTION_DAYS = 30
+    now = datetime.now(timezone.utc)
+    
     # Iterate through each snapshot and delete if it's not attached to any volume or the volume is not attached to a running instance
     for snapshot in response['Snapshots']:
+        start_time = snapshot['StartTime']
+        if (now - start_time) < timedelta(days=RETENTION_DAYS):
+            continue
         snapshot_id = snapshot['SnapshotId']
         volume_id = snapshot.get('VolumeId')
 
